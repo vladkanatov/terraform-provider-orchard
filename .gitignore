@@ -1,0 +1,24 @@
+# Provider binaries (build artifacts, not source)
+/terraform-provider-orchard
+/terraform-provider-orchard_*
+/bin/
+/dist/
+
+# Test artifacts
+*.test
+/coverage.out
+
+# Terraform local state
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
