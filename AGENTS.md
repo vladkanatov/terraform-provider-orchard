@@ -48,7 +48,22 @@ make install      # build + copy to local plugin mirror so `terraform` picks it 
 make fmt vet tidy # formatting, static checks, dependency hygiene
 make docs         # regenerate docs/ via tfplugindocs (downloads the tool on the fly)
 go run . -debug   # run provider in debug mode (for terraform debug session / delve)
+
+# release dry-run (builds all platforms into dist/, no publishing)
+go run github.com/goreleaser/goreleaser@latest release --snapshot --clean
 ```
+
+## Releasing
+
+- Release pipeline: `.goreleaser.yml` + `.github/workflows/release.yml`, both adapted from the official
+  [terraform-provider-scaffolding-framework](https://github.com/hashicorp/terraform-provider-scaffolding-framework).
+  Pushing a tag `vX.Y.Z` creates a signed GitHub Release; the registry ingests it via webhook (no token needed).
+- Registry-mandated naming — do not change: archives `terraform-provider-orchard_<version>_<os>_<arch>.zip`,
+  the binary inside each zip `terraform-provider-orchard_v<version>`, checksums `terraform-provider-orchard_<version>_SHA256SUMS` (+ `.sig`),
+  and `terraform-provider-orchard_<version>_manifest.json` (generated from `terraform-registry-manifest.json` at repo root).
+- `terraform-registry-manifest.json` declares protocol 6.0 (plugin framework) — keep in sync with `providerserver.ServeOpts` in `main.go`.
+- GPG signing key must be RSA/DSA (registry rejects ECC); CI secrets are `GPG_PRIVATE_KEY` and `PASSPHRASE`.
+- Before tagging: ensure CI is green. Never modify a published release — cut a new version.
 
 Manual end-to-end test: `make install`, then `terraform init/apply` a config in `examples/` (or any scratch dir) against a local controller.
 
@@ -105,11 +120,9 @@ Data sources follow the same steps with `datasource_*` naming and `DataSources()
 
 ## Known Issues / TODO
 
-- `resource_vm.go` `Create()` contains temporary `fmt.Printf` debug output, and `client.CreateVM` dumps the request JSON to stderr. Remove or replace with `terraform-plugin-log` (`tfsdklog`) before release.
 - `VMState.UsedResources` is tagged `json:"-"`, so it is never populated from API responses — the `used_resources` attribute is therefore always empty. Fix depends on the Orchard API actually returning the data.
 - `schema_helpers.go`: `vmResourceSchemaAttributes()` is currently unused (the VM resource defines its schema inline); `vmDataSourceSchemaAttributes()` IS used by `datasource_vm.go`. Either consolidate the VM resource to use the helper or delete the dead function.
 - No test coverage yet.
-- No release pipeline yet (goreleaser + registry token) — the provider is currently consumed via `make install`.
 
 ## Docs & Release Notes
 

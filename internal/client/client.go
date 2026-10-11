@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -231,12 +230,6 @@ func (c *Client) GetWorker(ctx context.Context, name string) (*Worker, error) {
 // VMs
 
 func (c *Client) CreateVM(ctx context.Context, vm *VM) (*VM, error) {
-	// Логируем запрос в stderr
-	b, _ := json.MarshalIndent(vm, "", "  ")
-	os.Stderr.WriteString("\n========== CREATE VM REQUEST ==========\n")
-	os.Stderr.Write(b)
-	os.Stderr.WriteString("\n========================================\n\n")
-
 	reqBody := VMCreateRequest{
 		VMMeta: vm.VMMeta,
 		VMSpec: vm.VMSpec,

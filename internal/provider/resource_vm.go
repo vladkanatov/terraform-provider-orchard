@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -80,7 +81,7 @@ type vmModel struct {
 }
 
 // toVMSpec преобразует vmModel в client.VMSpec (без изменений, кроме обработки nullable bool)
-func (m *vmModel) toVMSpec() *client.VMSpec {
+func (m *vmModel) toVMSpec() (*client.VMSpec, diag.Diagnostics) {
 	spec := &client.VMSpec{
 		OS:              m.OS.ValueString(),
 		Arch:            m.Arch.ValueString(),
@@ -100,19 +101,13 @@ func (m *vmModel) toVMSpec() *client.VMSpec {
 		PowerState:      m.PowerState.ValueString(),
 	}
 
+	var diags diag.Diagnostics
+
 	if !m.RequestedResources.IsNull() && !m.RequestedResources.IsUnknown() {
 		var res map[string]int64
 
-		diags := m.RequestedResources.ElementsAs(
-			context.Background(),
-			&res,
-			false,
-		)
-
-		if diags.HasError() {
-			// Временно для диагностики
-			fmt.Printf("ERROR converting resources: %v\n", diags)
-		} else {
+		diags.Append(m.RequestedResources.ElementsAs(context.Background(), &res, false)...)
+		if !diags.HasError() {
 			spec.RequestedResources = make(map[string]int, len(res))
 
 			for k, v := range res {
@@ -128,15 +123,15 @@ func (m *vmModel) toVMSpec() *client.VMSpec {
 	// списки
 	if !m.NetSoftnetAllow.IsNull() {
 		var allow []string
-		diags := m.NetSoftnetAllow.ElementsAs(context.Background(), &allow, false)
-		if diags == nil || !diags.HasError() {
+		diags.Append(m.NetSoftnetAllow.ElementsAs(context.Background(), &allow, false)...)
+		if !diags.HasError() {
 			spec.NetSoftnetAllow = allow
 		}
 	}
 	if !m.NetSoftnetBlock.IsNull() {
 		var block []string
-		diags := m.NetSoftnetBlock.ElementsAs(context.Background(), &block, false)
-		if diags == nil || !diags.HasError() {
+		diags.Append(m.NetSoftnetBlock.ElementsAs(context.Background(), &block, false)...)
+		if !diags.HasError() {
 			spec.NetSoftnetBlock = block
 		}
 	}
@@ -144,8 +139,8 @@ func (m *vmModel) toVMSpec() *client.VMSpec {
 	// labels
 	if !m.Labels.IsNull() {
 		var labels map[string]string
-		diags := m.Labels.ElementsAs(context.Background(), &labels, false)
-		if diags == nil || !diags.HasError() {
+		diags.Append(m.Labels.ElementsAs(context.Background(), &labels, false)...)
+		if !diags.HasError() {
 			spec.Labels = labels
 		}
 	}
@@ -153,8 +148,8 @@ func (m *vmModel) toVMSpec() *client.VMSpec {
 	// hostDirs
 	if !m.HostDirs.IsNull() {
 		var dirs []client.HostDir
-		diags := m.HostDirs.ElementsAs(context.Background(), &dirs, false)
-		if diags == nil || !diags.HasError() {
+		diags.Append(m.HostDirs.ElementsAs(context.Background(), &dirs, false)...)
+		if !diags.HasError() {
 			spec.HostDirs = dirs
 		}
 	}
@@ -163,7 +158,7 @@ func (m *vmModel) toVMSpec() *client.VMSpec {
 	if m.StartupScript != nil {
 		envMap := make(map[string]string)
 		if !m.StartupScript.Env.IsNull() {
-			m.StartupScript.Env.ElementsAs(context.Background(), &envMap, false)
+			diags.Append(m.StartupScript.Env.ElementsAs(context.Background(), &envMap, false)...)
 		}
 		spec.StartupScript = &client.StartupScript{
 			ScriptContent: m.StartupScript.ScriptContent.ValueString(),
@@ -171,7 +166,7 @@ func (m *vmModel) toVMSpec() *client.VMSpec {
 		}
 	}
 
-	return spec
+	return spec, diags
 }
 
 // vmModelFromVM преобразует client.VM в vmModel с корректными типами attr.Value
@@ -298,9 +293,6 @@ func vmModelFromVM(vm *client.VM) vmModel {
 func ptrBool(b bool) *bool {
 	return &b
 }
-
-// Методы Create, Read, Update, Delete остаются без изменений (они используют vmModelFromVM и toVMSpec)
-// ...
 
 type VMResource struct {
 	client *client.Client
@@ -522,17 +514,16 @@ func (r *VMResource) Create(ctx context.Context, req resource.CreateRequest, res
 	var plan vmModel
 
 	diags := req.Plan.Get(ctx, &plan)
-	fmt.Printf("PLAN resources: %#v\n", plan.RequestedResources)
-	fmt.Printf("PLAN resources elements: %#v\n", plan.RequestedResources.Elements())
-
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	spec := plan.toVMSpec()
-
-	fmt.Printf("SPEC resources: %#v\n", spec.RequestedResources)
+	spec, diags := plan.toVMSpec()
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	vm := &client.VM{
 		VMMeta: client.VMMeta{
@@ -693,7 +684,12 @@ func (r *VMResource) Update(ctx context.Context, req resource.UpdateRequest, res
 	}
 
 	// Отправляем только VMSpec (без мета-полей)
-	spec := plan.toVMSpec()
+	spec, diags := plan.toVMSpec()
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	updated, err := r.client.UpdateVM(ctx, state.Name.ValueString(), spec)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to update VM", err.Error())

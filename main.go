@@ -9,8 +9,10 @@ import (
 	"github.com/vladkanatov/terraform-provider-orchard/internal/provider"
 )
 
-// Version of provider. Можно задать при сборке через ldflags
-var version = "0.0.1" // или "dev"
+// Version and commit of the provider. Both are set at build time via ldflags
+// (see .goreleaser.yml); these are fallback values for local development.
+var version = "0.0.1"
+var commit = "unknown"
 
 func main() {
 	var debug bool

@@ -61,6 +61,47 @@ provider_installation {
 }
 ```
 
+## Releasing
+
+Releases are automated with [GoReleaser](https://goreleaser.com) (config adapted from the
+official [terraform-provider-scaffolding-framework](https://github.com/hashicorp/terraform-provider-scaffolding-framework))
+and published to [registry.terraform.io](https://registry.terraform.io/providers/vladkanatov/orchard)
+on every `v*` git tag.
+
+One-time setup (do this before the first release):
+
+1. The GitHub repo must be **public** and named `terraform-provider-orchard` (lowercase)
+   under the GitHub account that owns the registry namespace (here: `vladkanatov`).
+2. Generate a GPG signing key — **RSA or DSA** (the registry does not accept the default ECC):
+   `gpg --full-generate-key` (choose RSA). Export the ASCII-armored private key:
+   `gpg --armor --export-secret-keys <KEY_ID>`.
+3. Add the public key to the registry:
+   `gpg --armor --export <KEY_ID>` → [User Settings → Signing Keys](https://registry.terraform.io/settings/gpg-keys).
+4. Add GitHub repo secrets (**Settings → Secrets**):
+   - `GPG_PRIVATE_KEY` — the ASCII-armored private key from step 2
+   - `PASSPHRASE` — its passphrase
+5. Register the provider in the registry: sign in at
+   [registry.terraform.io](https://registry.terraform.io) with the GitHub account,
+   then **Publish → Provider** → select `vladkanatov` / `terraform-provider-orchard`.
+   This creates a webhook — from now on every GitHub Release is ingested by the registry automatically
+   (no registry token needed).
+
+Publishing a new version:
+
+1. Make sure CI is green.
+2. `git tag v0.1.0 && git push origin v0.1.0`
+3. The Release workflow builds all platforms, signs the checksums, and creates the GitHub Release;
+   the registry picks it up via the webhook. Check the version at
+   https://registry.terraform.io/providers/vladkanatov/orchard.
+
+Local dry-run (no publishing):
+
+```sh
+go run github.com/goreleaser/goreleaser/v2@latest release --snapshot --clean --skip=sign
+```
+
+Releases must never be modified after publication — always cut a new version.
+
 ## Testing
 
 ```sh
