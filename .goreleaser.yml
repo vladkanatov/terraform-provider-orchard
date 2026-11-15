@@ -69,5 +69,18 @@ release:
       name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
   # If you want to manually examine the release before its live, uncomment this line:
   # draft: true
+# Release notes are generated from commit messages between the previous tag
+# and this one (Conventional Commits: feat/fix/perf/refactor, ...).
+# Non-user-visible commit types are filtered out.
 changelog:
-  disable: true
+  sort: asc
+  # Drop commit SHAs from the release notes.
+  abbrev: -1
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
+      - "^test:"
+      - "^tests:"
+      - "^ci:"
+      - "^build:"
