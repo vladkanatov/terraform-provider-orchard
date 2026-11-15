@@ -641,14 +641,22 @@ func (r *VMResource) Read(ctx context.Context, req resource.ReadRequest, resp *r
 		return
 	}
 
-	ip, err := r.client.GetVMIP(ctx, state.Name.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError("Failed to read VM IP", err.Error())
-		return
+	// The IP endpoint returns 417 when the VM is in a terminal state
+	// (e.g. 'failed') — such a VM has no IP. Treat this as "no IP"
+	// instead of failing the read, otherwise refresh/destroy of dead VMs
+	// would be impossible.
+	ip := types.StringNull()
+	if newIP, err := r.client.GetVMIP(ctx, state.Name.ValueString()); err != nil {
+		if !strings.Contains(err.Error(), "417") {
+			resp.Diagnostics.AddError("Failed to read VM IP", err.Error())
+			return
+		}
+	} else if newIP != "" {
+		ip = types.StringValue(newIP)
 	}
 
 	newState := vmModelFromVM(vm)
-	newState.IP = types.StringValue(ip)
+	newState.IP = ip
 	diags = resp.State.Set(ctx, newState)
 	resp.Diagnostics.Append(diags...)
 }
