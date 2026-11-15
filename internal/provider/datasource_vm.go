@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -92,12 +93,22 @@ func (d *VMDataSource) Read(ctx context.Context, req datasource.ReadRequest, res
 	vmModels := make([]vmModel, len(vms))
 	for i, vm := range vms {
 		vmModels[i] = vmModelFromVM(&vm)
+		// 417 means the VM is in a terminal state (e.g. 'failed') and has no
+		// IP — report null instead of failing the whole read.
 		ip, err := d.client.GetVMIP(ctx, vm.Name)
 		if err != nil {
-			resp.Diagnostics.AddError("Failed to read VM IP", err.Error())
-			return
+			if !strings.Contains(err.Error(), "417") {
+				resp.Diagnostics.AddError("Failed to read VM IP", err.Error())
+				return
+			}
+			vmModels[i].IP = types.StringNull()
+			continue
 		}
-		vmModels[i].IP = types.StringValue(ip)
+		if ip != "" {
+			vmModels[i].IP = types.StringValue(ip)
+		} else {
+			vmModels[i].IP = types.StringNull()
+		}
 	}
 	state := struct {
 		VMs []vmModel `tfsdk:"vms"`
