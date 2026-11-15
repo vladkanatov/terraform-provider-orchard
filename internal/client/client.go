@@ -106,11 +106,6 @@ type VMSpec struct {
 	NetSoftnetDeprecated *bool             `json:"net-softnet,omitempty"`
 }
 
-// Отдельная структура для ответа от API
-type VMResources struct {
-	Resources map[string]int `json:"resources,omitempty"`
-}
-
 type StartupScript struct {
 	ScriptContent string            `json:"script_content,omitempty"`
 	Env           map[string]string `json:"env,omitempty"`
@@ -123,11 +118,10 @@ type HostDir struct {
 }
 
 type VMState struct {
-	Status             string         `json:"status,omitempty"`
-	StatusMessage      string         `json:"status_message,omitempty"`
-	Worker             string         `json:"worker,omitempty"`
-	ObservedGeneration int            `json:"observedGeneration,omitempty"`
-	UsedResources      map[string]int `json:"-"`
+	Status             string `json:"status,omitempty"`
+	StatusMessage      string `json:"status_message,omitempty"`
+	Worker             string `json:"worker,omitempty"`
+	ObservedGeneration int    `json:"observedGeneration,omitempty"`
 }
 
 type VMCreateRequest struct {
