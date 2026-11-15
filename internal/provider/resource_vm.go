@@ -76,8 +76,6 @@ type vmModel struct {
 	Worker             types.String        `tfsdk:"worker"`
 	ObservedGeneration types.Int64         `tfsdk:"observed_generation"`
 	IP                 types.String        `tfsdk:"ip"`
-	// Добавляем поле для ресурсов из ответа API
-	UsedResources types.Map `tfsdk:"used_resources"` // Новое поле
 }
 
 // toVMSpec преобразует vmModel в client.VMSpec (без изменений, кроме обработки nullable bool)
@@ -240,17 +238,6 @@ func vmModelFromVM(vm *client.VM) vmModel {
 		m.RequestedResources = types.MapValueMust(types.Int64Type, vals)
 	} else {
 		m.RequestedResources = types.MapNull(types.Int64Type)
-	}
-
-	// UsedResources (то, что вернул API)
-	if len(vm.UsedResources) > 0 {
-		vals := make(map[string]attr.Value)
-		for k, v := range vm.UsedResources {
-			vals[k] = types.Int64Value(int64(v))
-		}
-		m.UsedResources = types.MapValueMust(types.Int64Type, vals)
-	} else {
-		m.UsedResources = types.MapNull(types.Int64Type)
 	}
 
 	// Labels (map[string]string)
@@ -435,11 +422,6 @@ func (r *VMResource) Schema(ctx context.Context, req resource.SchemaRequest, res
 				ElementType: types.Int64Type,
 				Optional:    true,
 				Description: "Resource requirements for the worker.",
-			},
-			"used_resources": schema.MapAttribute{ // <-- ДОБАВЬТЕ ЭТО ПОЛЕ
-				ElementType: types.Int64Type,
-				Computed:    true,
-				Description: "Resources currently used by the VM on the worker (read-only).",
 			},
 			"labels": schema.MapAttribute{
 				ElementType: types.StringType,

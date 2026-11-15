@@ -120,8 +120,6 @@ Data sources follow the same steps with `datasource_*` naming and `DataSources()
 
 ## Known Issues / TODO
 
-- `VMState.UsedResources` is tagged `json:"-"`, so it is never populated from API responses — the `used_resources` attribute is therefore always empty. Fix depends on the Orchard API actually returning the data.
-- `schema_helpers.go`: `vmResourceSchemaAttributes()` is currently unused (the VM resource defines its schema inline); `vmDataSourceSchemaAttributes()` IS used by `datasource_vm.go`. Either consolidate the VM resource to use the helper or delete the dead function.
 - No test coverage yet.
 
 ## Docs & Release Notes

@@ -72,7 +72,6 @@ resource "orchard_vm" "example" {
 - `observed_generation` (Number)
 - `status` (String) Current status of the VM.
 - `status_message` (String)
-- `used_resources` (Map of Number) Resources currently used by the VM on the worker (read-only).
 - `worker` (String) Worker assigned to this VM.
 
 <a id="nestedatt--host_dirs"></a>
