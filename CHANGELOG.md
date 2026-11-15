@@ -4,7 +4,7 @@ Notable changes to the Orchard Terraform provider.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## 0.0.2
 
 ### Removed
 - `used_resources` attribute from the `orchard_vm` resource and data source.

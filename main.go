@@ -11,7 +11,7 @@ import (
 
 // Version and commit of the provider. Both are set at build time via ldflags
 // (see .goreleaser.yml); these are fallback values for local development.
-var version = "0.0.1"
+var version = "0.0.2"
 var commit = "unknown"
 
 func main() {

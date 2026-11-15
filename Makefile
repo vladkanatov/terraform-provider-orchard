@@ -1,6 +1,6 @@
 NAME    := orchard
 BINARY  := terraform-provider-$(NAME)
-VERSION ?= 0.0.1
+VERSION ?= 0.0.2
 OS_ARCH := $(shell go env GOOS)_$(shell go env GOARCH)
 
 # Local plugin mirror directory — installing here lets `terraform` pick up
